@@ -6,7 +6,7 @@ use std::process::ExitCode;
 use anyhow::{Context, bail};
 use clap::{Parser, ValueEnum};
 
-use svg2ppt::{ConvertOptions, Fit, Mode, Rgb, SlideSize, TextMode};
+use svg2ppt::{ConvertOptions, DEFAULT_SIMPLIFY_PX, Fit, Mode, Rgb, SlideSize, TextMode};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 enum ModeArg {
@@ -91,6 +91,10 @@ struct Cli {
     #[arg(long, default_value_t = 2.0)]
     scale: f64,
 
+    /// 折线简化容差（SVG px）：删掉对形状无可见贡献的折线顶点以压住体积，0 表示关闭
+    #[arg(long, default_value_t = DEFAULT_SIMPLIFY_PX, value_name = "PX")]
+    simplify: f64,
+
     /// 额外字体目录，可重复指定
     #[arg(long, value_name = "DIR")]
     font_dir: Vec<PathBuf>,
@@ -157,6 +161,7 @@ fn run() -> anyhow::Result<()> {
         background,
         text_mode: cli.text_mode.into(),
         scale: cli.scale.max(0.1),
+        simplify: cli.simplify.max(0.0),
         font_dirs: cli.font_dir.clone(),
     };
 
@@ -207,16 +212,20 @@ fn print_report(out: &Path, report: &svg2ppt::Report, quiet: bool) {
     if quiet {
         return;
     }
+    let simplified = report.simplified_points;
     if report.is_empty() {
         println!("已生成 {}", out.display());
-        return;
+    } else {
+        println!(
+            "已生成 {}（{} 处降级）",
+            out.display(),
+            report.diagnostics.len()
+        );
+        for (code, n) in report.summary() {
+            println!("  - {code} ×{n}");
+        }
     }
-    println!(
-        "已生成 {}（{} 处降级）",
-        out.display(),
-        report.diagnostics.len()
-    );
-    for (code, n) in report.summary() {
-        println!("  - {code} ×{n}");
+    if simplified > 0 {
+        println!("  · 路径简化删掉 {simplified} 个顶点");
     }
 }

@@ -189,6 +189,10 @@ impl Diagnostic {
 #[derive(Debug, Clone, Default)]
 pub struct Report {
     pub diagnostics: Vec<Diagnostic>,
+    /// 路径简化删掉的顶点数（0 表示未启用简化或没什么可删）。
+    ///
+    /// 放在 `Report` 里而不是 diagnostics：它不是「信息丢失」，不影响 `--strict`。
+    pub simplified_points: u64,
 }
 
 impl Report {
@@ -198,6 +202,8 @@ impl Report {
 
     pub fn extend(&mut self, other: Report) {
         self.diagnostics.extend(other.diagnostics);
+        // 统计是计数，必须累加而不是覆盖，否则 convert_many 只会留下最后一页的数字。
+        self.simplified_points += other.simplified_points;
     }
 
     pub fn is_empty(&self) -> bool {

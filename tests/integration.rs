@@ -214,3 +214,66 @@ fn invalid_input_reports_error() {
     let err = convert(b"<svg>", &ConvertOptions::default());
     assert!(err.is_err());
 }
+
+/// 一条 2000 点的密集折线，用来验证简化真的在削顶点。
+fn dense_polyline_svg() -> Vec<u8> {
+    let n = 2000;
+    let mut d = String::from("M ");
+    for i in 0..n {
+        let x = 20.0 + 600.0 * i as f64 / (n - 1) as f64;
+        let y = 180.0 - 120.0 * (6.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).sin();
+        d.push_str(&format!("{x:.3} {y:.3} "));
+        if i + 1 < n {
+            d.push('L');
+        }
+    }
+    // 注意用 r##"…"##：路径里的颜色值 `"#2563eb"` 含 `"#`，会提前终止 r#"…"#
+    format!(
+        r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360">
+<path d="{d}" fill="none" stroke="#2563eb" stroke-width="2"/></svg>"##
+    )
+    .into_bytes()
+}
+
+#[test]
+fn simplify_cuts_points_and_is_reported() {
+    let svg = dense_polyline_svg();
+    let opts = |s: f64| ConvertOptions {
+        simplify: s,
+        ..Default::default()
+    };
+
+    let (raw_bytes, raw_report) = convert(&svg, &opts(0.0)).unwrap();
+    assert_eq!(raw_report.simplified_points, 0, "关闭简化时不该有删点统计");
+
+    let (sim_bytes, sim_report) = convert(&svg, &opts(0.2)).unwrap();
+    assert!(
+        sim_report.simplified_points > 1000,
+        "密集折线应删掉大量顶点，实际 {}",
+        sim_report.simplified_points
+    );
+    assert!(sim_bytes.len() * 2 < raw_bytes.len(), "产物体积应显著下降");
+
+    let n_raw = slide_xml(&raw_bytes, 1).matches("<a:lnTo").count();
+    let n_sim = slide_xml(&sim_bytes, 1).matches("<a:lnTo").count();
+    assert!(n_sim * 2 < n_raw, "折线指令数应减半以上：{n_raw} → {n_sim}");
+    // 起点与终点是形状的骨架，绝不能删。
+    assert!(n_sim >= 2);
+}
+
+#[test]
+fn simplify_never_touches_curve_segments() {
+    // 贝塞尔的控制点不是路径上的点，删任何一个都会改变曲线形状 —— 简化必须放过它们。
+    let opts = |s: f64| ConvertOptions {
+        simplify: s,
+        text_mode: TextMode::Path,
+        ..Default::default()
+    };
+    let (a, _) = convert(&fixture("golden-geom.svg"), &opts(0.0)).unwrap();
+    let (b, _) = convert(&fixture("golden-geom.svg"), &opts(5.0)).unwrap();
+    assert_eq!(
+        slide_xml(&a, 1).matches("<a:cubicBezTo").count(),
+        slide_xml(&b, 1).matches("<a:cubicBezTo").count(),
+        "曲线段的数量不该受简化影响"
+    );
+}

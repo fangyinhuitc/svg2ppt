@@ -384,6 +384,7 @@ svg2ppt [OPTIONS] <INPUT>...
       --background <COLOR>   背景色，如 #ffffff / white
       --text-mode <MODE>     auto | path               [默认: auto]
       --scale <F>            raster 模式缩放倍率        [默认: 2.0]
+      --simplify <PX>        折线简化容差（SVG px），0 = 关闭  [默认: 0.2]
       --font-dir <DIR>       额外字体目录（可重复）
       --per-file             每个输入单独输出一个 pptx
       --strict               任何降级即报错退出
@@ -399,8 +400,9 @@ svg2ppt [OPTIONS] <INPUT>...
 
 | 层级 | 内容 |
 | --- | --- |
-| 单元 | EMU 换算、fit 计算、Quad→Cubic 升阶、矩阵分解、alpha 预乘、颜色解析 |
-| 集成 | `tests/fixtures/*.svg` → 生成 pptx，解压断言：页数、`<a:custGeom>` 数量、media 部件数与 content-type 正确、XML 可被 `quick-xml` 解析 |
+| 单元 | EMU 换算、fit 计算、Quad→Cubic 升阶、矩阵分解、alpha 预乘、颜色解析、折线简化（共线删除 / 拐角保留 / 容差 0 / 退化点） |
+| 金样 | `tests/golden.rs` 比对 `slideN.xml` 的逐字节快照，锁住 emit 层（详见 13.6，含两条硬约束） |
+| 集成 | `tests/fixtures/*.svg` → 生成 pptx，解压断言：页数、`<a:custGeom>` 数量、media 部件数与 content-type 正确、诊断码、简化行为 |
 | 降级断言 | 给每个 fixture 断言其诊断码集合（例如含 filter 的 fixture 必须产出 `filter-rasterized`） |
 | raster 回归 | `raster` 模式产出的 PNG 与 resvg 直接渲染结果做像素比对，保证「不走样」 |
 | 真实打开校验 | 生成后用 Python `python-pptx` / LibreOffice 无头转换验证不触发修复提示（CI 可选） |
@@ -417,8 +419,9 @@ fixture 至少覆盖：中文文本、线性渐变、旋转变换、内嵌图片
 | --- | --- |
 | **M1（已完成）** | CLI + `vector` 模式（path / 实色 / 线性渐变 / 描边 / 图片 / 文本转曲 / 变换）+ `raster` 模式 + 子树降级 + 诊断报告 + 集成测试 |
 | **M2-A（已完成）** | `--text-mode` 混合模式（可编辑文本框 + 带码回落）、修掉图片 bbox 的重复变换 |
+| **M3-A（已完成）** | 三平台 CI（ubuntu / macOS / Windows）、金样测试、折线简化（体积优化） |
 | M2-B | `native` 模式（包后处理注入 SVG 媒体部件）、多行可编辑文本（自算行距）、preset 形状识别、slide 背景/主题、配置文件支持 |
-| M3 | 库 API 稳定化、批量目录转换、CI（fmt/clippy/test/金样）、性能与体积优化 |
+| M3-B | 库 API 稳定化、批量目录转换（递归目录）、金样覆盖 raster 模式 |
 
 ---
 
@@ -430,7 +433,7 @@ fixture 至少覆盖：中文文本、线性渐变、旋转变换、内嵌图片
 | `Color` 不支持 alpha | 中 | 背景色预乘；`--strict` 可暴露 |
 | 可编辑文本的基线与 SVG 差 2~3 pt（渲染器字体度量差异） | 中 | 已由 `auto` 模式限定在单行简单文本；像素级要求时用 `--text-mode path`（详见 6.6） |
 | 服务端无中文字体 | 高 | fontdb 加载系统字体 + `--font-dir`；无字体时报错而非静默渲染豆腐块 |
-| 大量 path 导致 pptx 体积/形状数膨胀 | 低 | 后续可加路径简化（道格拉斯-普克）与合并同色相邻形状 |
+| 大量 path 导致 pptx 体积/形状数膨胀 | 低 | **已缓解**：折线简化默认开启（`--simplify 0.2`，实测 -69% 体积，见 13.6）。曲线段与形状数本身未优化 |
 | custGeom 坐标精度（EMU 为整数） | 低 | 逐点四舍五入；缩放后误差 < 1/9525 px，不可见 |
 
 ---
@@ -468,7 +471,7 @@ tests/integration.rs      端到端测试（解包检查 custGeom / media / 诊�
 
 ### 13.3 验证结果
 
-- `cargo test`：**18 项全通过**（7 单元 + 10 集成 + 1 doctest），`cargo clippy --all-targets` 零警告。
+- `cargo test`：**25 项全通过**（10 单元 + 2 金样 + 12 集成 + 1 doctest），`cargo clippy --all-targets` 零警告。
 - 视觉验证：LibreOffice 无头转 PDF → 渲染 PNG，逐页比对。
   - `basic.svg`（渐变圆角矩形 + 半透明圆 + 三角形 + 旋转 20° 的矩形 + 中英混排文本）**逐元素还原**，位置、角度、渐变方向、混色均正确。
   - `filtered.svg`：滤镜矩形与径向渐变圆按预期降级为位图并保真贴回原位，未降级的绿色矩形保持矢量。
@@ -489,5 +492,24 @@ tests/integration.rs      端到端测试（解包检查 custGeom / media / 诊�
 
 - 多行文本仍走转曲（`text-multiline-fallback`）：要可编辑就得自算行距并接受 PPT 的换行重排，留到 M2-B。
 - `native` 模式（嵌入原 SVG 媒体部件）未实现。
-- 未做路径简化，超大 SVG（数万路径）的产物体积尚未优化。
-- 未接入 CI；未见真实企业模板（母版/主题）适配。
+- 库 API 未做稳定化承诺；不支持递归目录批量转换。
+- 未见真实企业模板（母版/主题）适配。
+
+### 13.6 M3-A：工程化（CI / 金样 / 体积）
+
+**三平台 CI**（`.github/workflows/ci.yml`）：`ubuntu-latest` / `macos-latest` / `windows-latest` 矩阵，跑 build + test + `clippy -D warnings` + `fmt --check`，`fail-fast: false`（跨平台差异正是要发现的东西）。Linux runner 缺中文字体，显式装 `fonts-noto-cjk`，否则含中文的 fixture 会挂。
+
+**金样测试**（`tests/golden.rs`）。两条硬约束：
+
+1. 比对的必须是 `ppt/slides/slideN.xml`，**不能是整个 pptx**。`office-toolkit` 写 zip 时用当前时间填 DOS 时间戳，同一输入两次运行字节不同（实测确认；`slide_xml_is_deterministic` 守着这个前提）。XML 内容本身完全确定。
+2. 金样 fixture **不能含文本**。字形轮廓来自系统字体，三平台必然不同。所以新增 `golden-geom.svg`（纯几何：圆角矩形+描边、椭圆+线性渐变、三次/二次贝塞尔、带旋转缩放的半透明分组、四段式虚线），文本回归交给 `integration.rs` 的行为断言。
+
+**折线简化**（`geom.rs::simplify_mask` + `convert.rs::simplify_cmds`）：道格拉斯-普克，显式栈实现（数万点的递归会爆栈）。三条设计决策：
+
+- **只简化 `MoveTo` 之后的连续 `LineTo`**。贝塞尔的控制点不是路径上的点，删任何一个都会改变曲线形状，一律不动。这是安全的子集，也是与「通用路径简化」的关键区别。
+- 容差单位是 **SVG 用户坐标的 px**（`--simplify`，默认 0.2），在 `build_shape` 里乘 `avg_scale(total)` 换算成 EMU 再比较。默认 0.2 px 在铺满 16:9 时约 0.1 mm。
+- bbox 在简化**之前**由 `track` 累积完整，因此简化不会让形状框变小（宁留余量），也就不影响 `a:off`/`a:ext`。
+
+实测（2000 点正弦折线，640×360）：顶点 1999 → 122（删 1877 个），pptx 24 881 → 7 812 字节（-69%）。LibreOffice 渲染后逐像素比对，1889 个差异像素全部落在线条抗锯齿边缘（占画面 0.15%），无形状变形。
+
+`Report` 新增 `simplified_points` 计数。**注意它不是诊断**，不进 `--strict` 判定——简化不是信息丢失。踩到的坑：`Report::extend` 最初只合并了 `diagnostics`，导致 `convert_many` 时统计只剩最后一页，已修为累加。

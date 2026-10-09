@@ -21,7 +21,7 @@ pub mod ir;
 pub mod raster;
 pub mod svg;
 
-pub use convert::{ConvertOptions, Mode, SlideSize, TextMode};
+pub use convert::{ConvertOptions, DEFAULT_SIMPLIFY_PX, Mode, SlideSize, TextMode};
 pub use error::Error;
 pub use geom::{Fit, Rgb};
 pub use ir::{Diagnostic, Report};

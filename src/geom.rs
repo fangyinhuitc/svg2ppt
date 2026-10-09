@@ -235,6 +235,50 @@ pub fn degrees_to_units(deg: f64) -> i32 {
     (deg * UNITS_PER_DEGREE).round() as i32
 }
 
+/// 点到线段 `a→b` 的垂直距离。
+fn perp_distance(p: (f64, f64), a: (f64, f64), b: (f64, f64)) -> f64 {
+    let (dx, dy) = (b.0 - a.0, b.1 - a.1);
+    let len_sq = dx * dx + dy * dy;
+    if len_sq == 0.0 {
+        return ((p.0 - a.0).powi(2) + (p.1 - a.1).powi(2)).sqrt();
+    }
+    ((p.0 - a.0) * dy - (p.1 - a.1) * dx).abs() / len_sq.sqrt()
+}
+
+/// 道格拉斯-普克：标出折线上哪些点必须保留。
+///
+/// 首尾点恒保留；其余点若到「所跨越弦」的垂直距离不超过 `tol`，视为冗余。
+/// 用显式栈而非递归——长路径（数万点）递归会爆栈。
+pub fn simplify_mask(pts: &[(f64, f64)], tol: f64) -> Vec<bool> {
+    let n = pts.len();
+    let mut keep = vec![true; n];
+    if n < 3 {
+        return keep;
+    }
+    keep[1..n - 1].iter_mut().for_each(|k| *k = false);
+
+    let mut stack = vec![(0usize, n - 1)];
+    while let Some((a, b)) = stack.pop() {
+        if b <= a + 1 {
+            continue;
+        }
+        let (mut max_d, mut idx) = (-1.0f64, a);
+        for k in a + 1..b {
+            let d = perp_distance(pts[k], pts[a], pts[b]);
+            if d > max_d {
+                max_d = d;
+                idx = k;
+            }
+        }
+        if max_d > tol {
+            keep[idx] = true;
+            stack.push((a, idx));
+            stack.push((idx, b));
+        }
+    }
+    keep
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -332,5 +376,36 @@ mod tests {
     fn skew_detection() {
         assert!(!has_skew_or_rotation(Transform::from_scale(2.0, 3.0)));
         assert!(has_skew_or_rotation(Transform::from_rotate(30.0)));
+    }
+
+    #[test]
+    fn simplify_drops_collinear_keeps_corners() {
+        // 一条直线上的 5 个点，中间 3 个是冗余的。
+        let pts: Vec<(f64, f64)> = (0..5).map(|i| (i as f64 * 10.0, 0.0)).collect();
+        let keep = simplify_mask(&pts, 1.0);
+        assert_eq!(keep.iter().filter(|k| **k).count(), 2);
+        assert!(keep[0] && keep[4]);
+
+        // 明显的拐角必须留下，否则形状就变了。
+        let corner = vec![(0.0, 0.0), (50.0, 2.0), (100.0, 0.0)];
+        assert!(simplify_mask(&corner, 1.0)[1]);
+        // 距离恰好等于容差时按「冗余」处理（不保留），这是 DP 的严格定义。
+        let borderline = vec![(0.0, 0.0), (50.0, 1.0), (100.0, 0.0)];
+        assert!(!simplify_mask(&borderline, 1.0)[1]);
+    }
+
+    #[test]
+    fn simplify_tolerance_zero_keeps_everything() {
+        let pts = vec![(0.0, 0.0), (1.0, 0.1), (2.0, 0.0), (3.0, 50.0)];
+        let keep = simplify_mask(&pts, 0.0);
+        assert!(keep.iter().all(|k| *k), "容差为 0 时不应删除任何点");
+    }
+
+    #[test]
+    fn simplify_handles_degenerate_points() {
+        // 重合点（零长度弦）不能让算法除零或死循环。
+        let pts = vec![(5.0, 5.0), (5.0, 5.0), (5.0, 5.0), (5.0, 5.0)];
+        let keep = simplify_mask(&pts, 1.0);
+        assert!(keep[0] && keep[3]);
     }
 }

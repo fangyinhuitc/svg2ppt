@@ -1,6 +1,8 @@
 # svg2ppt
 
-把 SVG 转成 `.pptx` 的命令行工具与库。纯 Rust，无外部二进制依赖。
+[![CI](https://github.com/fangyinhuitc/svg2ppt/actions/workflows/ci.yml/badge.svg)](https://github.com/fangyinhuitc/svg2ppt/actions/workflows/ci.yml)
+
+把 SVG 转成 `.pptx` 的命令行工具与库。纯 Rust，无外部二进制依赖，macOS / Windows / Linux 三平台 CI 覆盖。
 
 设计文档见 [`docs/design.md`](docs/design.md)（含技术选型对比、SVG→DrawingML 映射规则、保真度降级矩阵）。
 
@@ -45,6 +47,7 @@ svg2ppt diagram.svg --strict
 | `--background <COLOR>` | 背景色，同时作为半透明像素的混色基底 |
 | `--text-mode auto\|path` | `auto`（默认）能安全表达的单行文本写成**可编辑文本框**，其余转曲；`path` 一律转曲（像素级保真） |
 | `--scale <F>` | 位图超采样倍率，默认 2.0 |
+| `--simplify <PX>` | 折线简化容差（SVG px），默认 0.2。删掉对形状无可见贡献的折线顶点；`0` 关闭 |
 | `--font-dir <DIR>` | 额外字体目录（服务端部署常用） |
 | `--per-file` | 每个输入单独输出 |
 | `--strict` | 有降级即失败 |
@@ -88,8 +91,28 @@ for (code, n) in report.summary() {
 ## 开发
 
 ```bash
-cargo test          # 18 项：单元 + 集成 + doctest
+cargo test          # 25 项：单元 + 金样 + 集成 + doctest
 cargo clippy --all-targets
-cargo run --example ir -- tests/fixtures/basic.svg   # 看转换后的中间表示
+cargo fmt --all --check
+
+cargo run --example ir -- tests/fixtures/basic.svg       # 看转换后的中间表示
 cargo run --example inspect -- tests/fixtures/basic.svg  # 看 usvg 的节点变换
+```
+
+### 测试的两层结构
+
+| 层 | 文件 | 断言方式 | 为什么这么分 |
+| --- | --- | --- | --- |
+| 金样 | `tests/golden.rs` + `tests/snapshots/` | 与快照**逐字节**比对 | 锁住 emit 层写出的 DrawingML，任何几何回归都会炸 |
+| 行为 | `tests/integration.rs` | 只断言性质（形状数、诊断码、指令数） | 不依赖具体数值，因此能跨平台跑 |
+
+金样 fixture 限制两条，改之前先想清楚：
+
+1. **不含文本** —— 文本走字形轮廓，轮廓来自系统字体，三平台字体不同，快照必然挂。
+2. 比对的是 `ppt/slides/slideN.xml` 而**不是整个 pptx** —— `office-toolkit` 会把当前时间写进 zip 条目的 DOS 时间戳，同一个输入两次运行字节也不同（`slide_xml_is_deterministic` 这条测试守着这个前提）。
+
+改动了输出且确认是预期内的：
+
+```bash
+SVG2PPT_UPDATE_GOLDEN=1 cargo test --test golden
 ```

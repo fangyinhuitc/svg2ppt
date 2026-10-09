@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+<p:cSld>
+<p:spTree>
+<p:nvGrpSpPr>
+<p:cNvPr id="1" name=""/>
+<p:cNvGrpSpPr/>
+<p:nvPr/>
+</p:nvGrpSpPr>
+<p:grpSpPr>
+<a:xfrm>
+<a:off x="0" y="0"/>
+<a:ext cx="0" cy="0"/>
+<a:chOff x="0" y="0"/>
+<a:chExt cx="0" cy="0"/>
+</a:xfrm>
+</p:grpSpPr>
+<p:sp>
+<p:nvSpPr>
+<p:cNvPr id="2" name="形状 1"/>
+<p:cNvSpPr/>
+<p:nvPr/>
+</p:nvSpPr>
+<p:spPr>
+<a:xfrm>
+<a:off x="733425" y="542925"/>
+<a:ext cx="3867150" cy="2343150"/>
+</a:xfrm>
+<a:custGeom>
+<a:pathLst>
+<a:path w="3867150" h="2343150">
+<a:moveTo>
+<a:pt x="333375" y="28575"/>
+</a:moveTo>
+<a:lnTo>
+<a:pt x="3533775" y="28575"/>
+</a:lnTo>
+<a:cubicBezTo>
+<a:pt x="3702112" y="28575"/>
+<a:pt x="3838575" y="165039"/>
+<a:pt x="3838575" y="333375"/>
+</a:cubicBezTo>
+<a:lnTo>
+<a:pt x="3838575" y="2009775"/>
+</a:lnTo>
+<a:cubicBezTo>
+<a:pt x="3838575" y="2178112"/>
+<a:pt x="3702112" y="2314575"/>
+<a:pt x="3533775" y="2314575"/>
+</a:cubicBezTo>
+<a:lnTo>
+<a:pt x="333375" y="2314575"/>
+</a:lnTo>
+<a:cubicBezTo>
+<a:pt x="165039" y="2314575"/>
+<a:pt x="28575" y="2178112"/>
+<a:pt x="28575" y="2009775"/>
+</a:cubicBezTo>
+<a:lnTo>
+<a:pt x="28575" y="333375"/>
+</a:lnTo>
+<a:cubicBezTo>
+<a:pt x="28575" y="165039"/>
+<a:pt x="165039" y="28575"/>
+<a:pt x="333375" y="28575"/>
+</a:cubicBezTo>
+<a:close/>
+</a:path>
+</a:pathLst>
+</a:custGeom>
+<a:solidFill>
+<a:srgbClr val="22C55E"/>
+</a:solidFill>
+<a:ln w="57150" cap="flat">
+<a:solidFill>
+<a:srgbClr val="166534"/>
+</a:solidFill>
+<a:miter/>
+</a:ln>
+</p:spPr>
+</p:sp>
+<p:sp>
+<p:nvSpPr>
+<p:cNvPr id="3" name="形状 2"/>
+<p:cNvSpPr/>
+<p:nvPr/>
+</p:nvSpPr>
+<p:spPr>
+<a:xfrm>
+<a:off x="5524500" y="857250"/>
+<a:ext cx="2667000" cy="1714500"/>
+</a:xfrm>
+<a:custGeom>
+<a:pathLst>
+<a:path w="2667000" h="1714500">
+<a:moveTo>
+<a:pt x="2667000" y="857250"/>
+</a:moveTo>
+<a:cubicBezTo>
+<a:pt x="2667000" y="1330696"/>
+<a:pt x="2069972" y="1714500"/>
+<a:pt x="1333500" y="1714500"/>
+</a:cubicBezTo>
+<a:cubicBezTo>
+<a:pt x="597028" y="1714500"/>
+<a:pt x="0" y="1330696"/>
+<a:pt x="0" y="857250"/>
+</a:cubicBezTo>
+<a:cubicBezTo>
+<a:pt x="0" y="383804"/>
+<a:pt x="597028" y="0"/>
+<a:pt x="1333500" y="0"/>
+</a:cubicBezTo>
+<a:cubicBezTo>
+<a:pt x="2069972" y="0"/>
+<a:pt x="2667000" y="383804"/>
+<a:pt x="2667000" y="857250"/>
+</a:cubicBezTo>
+<a:close/>
+</a:path>
+</a:pathLst>
+</a:custGeom>
+<a:gradFill>
+<a:gsLst>
+<a:gs pos="0">
+<a:srgbClr val="2563EB"/>
+</a:gs>
+<a:gs pos="100000">
+<a:srgbClr val="DC2626"/>
+</a:gs>
+</a:gsLst>
+<a:lin ang="2700000"/>
+</a:gradFill>
+</p:spPr>
+</p:sp>
+<p:sp>
+<p:nvSpPr>
+<p:cNvPr id="4" name="形状 3"/>
+<p:cNvSpPr/>
+<p:nvPr/>
+</p:nvSpPr>
+<p:spPr>
+<a:xfrm>
+<a:off x="9144000" y="190500"/>
+<a:ext cx="1905000" cy="2857500"/>
+</a:xfrm>
+<a:custGeom>
+<a:pathLst>
+<a:path w="1905000" h="2857500">
+<a:moveTo>
+<a:pt x="0" y="571500"/>
+</a:moveTo>
+<a:cubicBezTo>
+<a:pt x="762000" y="0"/>
+<a:pt x="1905000" y="1143000"/>
+<a:pt x="1524000" y="2095500"/>
+</a:cubicBezTo>
+<a:cubicBezTo>
+<a:pt x="1238250" y="2762250"/>
+<a:pt x="476250" y="2857500"/>
+<a:pt x="285750" y="2286000"/>
+</a:cubicBezTo>
+<a:close/>
+</a:path>
+</a:pathLst>
+</a:custGeom>
+<a:solidFill>
+<a:srgbClr val="F59E0B"/>
+</a:solidFill>
+</p:spPr>
+</p:sp>
+<p:sp>
+<p:nvSpPr>
+<p:cNvPr id="5" name="形状 4"/>
+<p:cNvSpPr/>
+<p:nvPr/>
+</p:nvSpPr>
+<p:spPr>
+<a:xfrm>
+<a:off x="1104900" y="3517899"/>
+<a:ext cx="4648200" cy="1346201"/>
+</a:xfrm>
+<a:custGeom>
+<a:pathLst>
+<a:path w="4648200" h="1346201">
+<a:moveTo>
+<a:pt x="38100" y="673101"/>
+</a:moveTo>
+<a:cubicBezTo>
+<a:pt x="800100" y="38101"/>
+<a:pt x="1562100" y="38101"/>
+<a:pt x="2324100" y="673101"/>
+</a:cubicBezTo>
+<a:cubicBezTo>
+<a:pt x="3086100" y="1308101"/>
+<a:pt x="3848100" y="1308101"/>
+<a:pt x="4610100" y="673101"/>
+</a:cubicBezTo>
+</a:path>
+</a:pathLst>
+</a:custGeom>
+<a:noFill/>
+<a:ln w="76200" cap="flat">
+<a:solidFill>
+<a:srgbClr val="7C3AED"/>
+</a:solidFill>
+<a:miter/>
+</a:ln>
+</p:spPr>
+</p:sp>
+<p:sp>
+<p:nvSpPr>
+<p:cNvPr id="6" name="形状 5"/>
+<p:cNvSpPr/>
+<p:nvPr/>
+</p:nvSpPr>
+<p:spPr>
+<a:xfrm>
+<a:off x="6668215" y="3597074"/>
+<a:ext cx="2665570" cy="2330852"/>
+</a:xfrm>
+<a:custGeom>
+<a:pathLst>
+<a:path w="2665570" h="2330852">
+<a:moveTo>
+<a:pt x="685807" y="0"/>
+</a:moveTo>
+<a:lnTo>
+<a:pt x="2665570" y="1143012"/>
+</a:lnTo>
+<a:lnTo>
+<a:pt x="1979763" y="2330852"/>
+</a:lnTo>
+<a:lnTo>
+<a:pt x="0" y="1187841"/>
+</a:lnTo>
+<a:close/>
+</a:path>
+</a:pathLst>
+</a:custGeom>
+<a:solidFill>
+<a:srgbClr val="4ABCEF"/>
+</a:solidFill>
+</p:spPr>
+</p:sp>
+<p:sp>
+<p:nvSpPr>
+<p:cNvPr id="7" name="形状 6"/>
+<p:cNvSpPr/>
+<p:nvPr/>
+</p:nvSpPr>
+<p:spPr>
+<a:xfrm>
+<a:off x="742950" y="5124450"/>
+<a:ext cx="3086100" cy="1181100"/>
+</a:xfrm>
+<a:custGeom>
+<a:pathLst>
+<a:path w="3086100" h="1181100">
+<a:moveTo>
+<a:pt x="19050" y="19050"/>
+</a:moveTo>
+<a:lnTo>
+<a:pt x="3067050" y="19050"/>
+</a:lnTo>
+<a:lnTo>
+<a:pt x="3067050" y="1162050"/>
+</a:lnTo>
+<a:lnTo>
+<a:pt x="19050" y="1162050"/>
+</a:lnTo>
+<a:close/>
+</a:path>
+</a:pathLst>
+</a:custGeom>
+<a:noFill/>
+<a:ln w="38100" cap="flat">
+<a:solidFill>
+<a:srgbClr val="111827"/>
+</a:solidFill>
+<a:prstDash val="lgDashDot"/>
+<a:miter/>
+</a:ln>
+</p:spPr>
+</p:sp>
+</p:spTree>
+</p:cSld>
+<p:clrMapOvr>
+<a:masterClrMapping/>
+</p:clrMapOvr>
+</p:sld>

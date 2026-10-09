@@ -10,6 +10,7 @@ use usvg::tiny_skia_path::{PathSegment, Point, Transform};
 use crate::error::Error;
 use crate::geom::{
     EMU_PER_PT, Fit, Placement, Rgb, avg_scale, concat, has_skew_or_rotation, quad_to_cubic,
+    simplify_mask,
 };
 use crate::ir::{
     CapKind, DashKind, Diagnostic, Frame, ImageFormat, ImageItem, Item, JoinKind, Page, Paint,
@@ -71,8 +72,16 @@ pub struct ConvertOptions {
     pub text_mode: TextMode,
     /// 位图超采样倍率（相对画布逻辑像素）。
     pub scale: f64,
+    /// 折线简化容差，单位是 **SVG 用户坐标的 px**。
+    ///
+    /// 只删「到所跨弦的垂直距离不超过该值」的折线顶点，曲线段不动。
+    /// `0.0` = 关闭简化。经验值：0.2 px 在 16:9 画布上约 0.1 mm，肉眼不可见。
+    pub simplify: f64,
     pub font_dirs: Vec<PathBuf>,
 }
+
+/// 默认简化容差（px）。选 0.2 是因为它对体积有效、对视觉无感。
+pub const DEFAULT_SIMPLIFY_PX: f64 = 0.2;
 
 impl Default for ConvertOptions {
     fn default() -> Self {
@@ -83,6 +92,7 @@ impl Default for ConvertOptions {
             background: None,
             text_mode: TextMode::Auto,
             scale: 2.0,
+            simplify: DEFAULT_SIMPLIFY_PX,
             font_dirs: Vec::new(),
         }
     }
@@ -92,6 +102,59 @@ impl ConvertOptions {
     pub fn canvas(&self) -> (i64, i64) {
         self.slide.emu()
     }
+}
+
+/// 对 `MoveTo` 之后**连续的折线段**做道格拉斯-普克简化，返回新指令与删掉的点数。
+///
+/// 曲线段（`CubicTo`）一律不动：贝塞尔的控制点不是「路径上的点」，
+/// 删掉任意一个都会改变曲线形状。所以只对纯折线动手，这是安全的子集。
+fn simplify_cmds(cmds: &[PathCmd], tol_emu: f64) -> (Vec<PathCmd>, usize) {
+    if tol_emu <= 0.0 {
+        return (cmds.to_vec(), 0);
+    }
+    let mut out: Vec<PathCmd> = Vec::with_capacity(cmds.len());
+    let mut removed = 0usize;
+    let mut i = 0;
+    while i < cmds.len() {
+        if !matches!(cmds[i], PathCmd::MoveTo(..)) {
+            out.push(cmds[i]);
+            i += 1;
+            continue;
+        }
+        // 收集这条子路径起点之后紧跟的所有 LineTo。
+        let start = i;
+        let mut j = i + 1;
+        while matches!(cmds.get(j), Some(PathCmd::LineTo(..))) {
+            j += 1;
+        }
+        // 少于「起点 + 2 个顶点」时没有可删的中间点。
+        if j - start < 3 {
+            out.extend_from_slice(&cmds[start..j]);
+            i = j;
+            continue;
+        }
+        let PathCmd::MoveTo(sx, sy) = cmds[start] else {
+            unreachable!()
+        };
+        let mut pts = Vec::with_capacity(j - start);
+        pts.push((sx as f64, sy as f64));
+        for cmd in &cmds[start + 1..j] {
+            if let PathCmd::LineTo(x, y) = cmd {
+                pts.push((*x as f64, *y as f64));
+            }
+        }
+        let keep = simplify_mask(&pts, tol_emu);
+        out.push(cmds[start]);
+        for (k, cmd) in cmds[start + 1..j].iter().enumerate() {
+            if keep[k + 1] {
+                out.push(*cmd);
+            } else {
+                removed += 1;
+            }
+        }
+        i = j;
+    }
+    (out, removed)
 }
 
 /// 把一份 SVG 转成 IR 页面。
@@ -143,6 +206,7 @@ pub fn tree_to_page(tree: &usvg::Tree, opts: &ConvertOptions) -> (Page, Report) 
         place: placement.to_transform(),
         place_scale: placement.scale(),
         supersample: opts.scale.max(1.0),
+        simplify_px: opts.simplify.max(0.0),
         bg: opts.background.unwrap_or(Rgb::WHITE),
         text_mode: opts.text_mode,
         page: &mut page,
@@ -163,6 +227,8 @@ struct Walker<'a> {
     /// place 的平均缩放（SVG px → 画布 px），用于位图分辨率。
     place_scale: f64,
     supersample: f64,
+    /// 折线简化容差（SVG px）；0 表示关闭。
+    simplify_px: f64,
     bg: Rgb,
     text_mode: TextMode,
     page: &'a mut Page,
@@ -632,6 +698,15 @@ impl Walker<'_> {
                 }
                 PathSegment::Close => cmds.push(PathCmd::Close),
             }
+        }
+
+        // 折线简化：删掉对形状没有可见贡献的顶点，压住超大 SVG 的产物体积。
+        // bbox 已由上面的 track 累积完整（含即将被删的点），所以这里不会让框变小。
+        if self.simplify_px > 0.0 {
+            let tol_emu = self.simplify_px * avg_scale(total);
+            let (shrunk, removed) = simplify_cmds(&cmds, tol_emu);
+            cmds = shrunk;
+            self.report.simplified_points += removed as u64;
         }
 
         if cmds.is_empty() || !min_x.is_finite() {
