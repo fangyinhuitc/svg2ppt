@@ -296,7 +296,12 @@ usvg 的每个节点都带有从根累积下来的绝对变换矩阵（`abs_tran
 | 无 `baseline-shift` / 上下标 | `text-baseline-shift-fallback` |
 | 无 `font-variant: small-caps` | `text-small-caps-fallback` |
 | 填充为纯色（非渐变/图案） | `text-paint-fallback` |
+| 字体在本机可解析（否则整段被丢，见下） | `text-font-unresolved` |
 | 无描边、且可见 | `text-stroked-fallback` / `text-hidden-fallback` |
+
+**字体解析失败必须显式报告**（`text-font-unresolved`）。这是三平台 CI 跑起来后才暴露的行为：某个文本节点的字体栈在本机全部匹配不到时，usvg 会把它的 `layouted()` 排成**空 span**，整段文字连带 chunk 一起消失——不报错、不告警，属于典型的静默丢失。判定方式就是进 Transform 分支前先检查 `t.layouted().is_empty()`。
+
+最容易被坑的是 **Linux**：`fontdb` 在那里**不解析 CSS 通用族**，`sans-serif` / `serif` 一律匹配不到网络字体栈里的任何一项；macOS 与 Windows 则会兜到某个默认字体。实测 Ubuntu runner 上一份写着 `font-family="PingFang SC"` 的 fixture 连纯拉丁部分都排不出来，只有写明 `Noto Sans CJK SC` 才成功。所以 fixture 与用户 SVG 都应当列出真实族名而非只依赖通用族。
 
 几何与字号换算：
 
@@ -497,12 +502,20 @@ tests/integration.rs      端到端测试（解包检查 custGeom / media / 诊�
 
 ### 13.6 M3-A：工程化（CI / 金样 / 体积）
 
-**三平台 CI**（`.github/workflows/ci.yml`）：`ubuntu-latest` / `macos-latest` / `windows-latest` 矩阵，跑 build + test + `clippy -D warnings` + `fmt --check`，`fail-fast: false`（跨平台差异正是要发现的东西）。Linux runner 缺中文字体，显式装 `fonts-noto-cjk`，否则含中文的 fixture 会挂。
+**三平台 CI**（`.github/workflows/ci.yml`）：`ubuntu-latest` / `macos-latest` / `windows-latest` 矩阵，跑 build + test + `clippy -D warnings` + `fmt --check`，`fail-fast: false`（跨平台差异正是要发现的东西）。Linux runner 缺中文字体，显式装 `fonts-noto-cjk`。
+
+CI 第一次真正三平台跑起来，就查出两个只在非 macOS 上出现的问题（修法见 6.6 与上文）：
+
+1. **字体族无法解析** → Linux 上三个文本测试全挂。修法是给 fixture 加真实族名回退链；顺带意识到「整段文字被静默丢弃」必须显式报告，于是加了 `text-font-unresolved` 诊断。
+2. **金样快照被 checkout 成 CRLF** → Windows 上 `drawingml_matches_golden` 挂。修法是 `normalize` 先抹掉 `\r`，并加 `.gitattributes` 把 `tests/snapshots/**` 与 fixtures 钉成 LF。
+
+结论：**跨平台 CI 的价值不在重复跑一遍测试，而在把「本机碰巧能跑」的假设打掉**。这两条都只有在别的系统上才暴露得了。
 
 **金样测试**（`tests/golden.rs`）。两条硬约束：
 
 1. 比对的必须是 `ppt/slides/slideN.xml`，**不能是整个 pptx**。`office-toolkit` 写 zip 时用当前时间填 DOS 时间戳，同一输入两次运行字节不同（实测确认；`slide_xml_is_deterministic` 守着这个前提）。XML 内容本身完全确定。
 2. 金样 fixture **不能含文本**。字形轮廓来自系统字体，三平台必然不同。所以新增 `golden-geom.svg`（纯几何：圆角矩形+描边、椭圆+线性渐变、三次/二次贝塞尔、带旋转缩放的半透明分组、四段式虚线），文本回归交给 `integration.rs` 的行为断言。
+3. **比对前抹掉 `\r`**。Windows 的 `core.autocrlf` 会把快照 checkout 成 CRLF，而 emit 层产出的永远是 LF，不归一化就必然红（首跑时正是这条挂了）。配套加了 `.gitattributes` 把 snapshot 钉成 LF，双保险。
 
 **折线简化**（`geom.rs::simplify_mask` + `convert.rs::simplify_cmds`）：道格拉斯-普克，显式栈实现（数万点的递归会爆栈）。三条设计决策：
 

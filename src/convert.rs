@@ -415,6 +415,31 @@ impl Walker<'_> {
             }
 
             usvg::Node::Text(t) => {
+                // 字体在本机解析不到时，usvg 会把整段文本排版成**空 span**
+                // （实测 Ubuntu runner 上 `PingFang SC` / `sans-serif` 都命中不了，
+                // 连纯拉丁文本都会整段消失）。这属于静默丢失，必须报出来。
+                if t.layouted().is_empty() {
+                    let spans: Vec<&usvg::TextSpan> =
+                        t.chunks().iter().flat_map(|c| c.spans()).collect();
+                    let mut names: Vec<String> = Vec::new();
+                    for span in &spans {
+                        for name in font_family_names(span.font()) {
+                            if !names.contains(&name) {
+                                names.push(name);
+                            }
+                        }
+                    }
+                    self.report.push(
+                        "text-font-unresolved",
+                        format!(
+                            "文本 {:?} 的字体在本机都找不到（{}），整段文字已被跳过：\
+                             请安装该字体，或用 --font-dir 指定字体目录",
+                            t.id(),
+                            names.join(", ")
+                        ),
+                    );
+                    return;
+                }
                 let total = concat(concat(t.abs_transform(), extra), self.place);
                 if self.text_mode == TextMode::Auto {
                     match self.try_text_item(t, total, parent_opacity) {
@@ -836,9 +861,8 @@ fn map_dash(pattern: &[f32], width: f64) -> Option<DashKind> {
     })
 }
 
-/// 取字体栈里第一个可用族名；CSS 通用族映射成 PowerPoint 上确实存在的字体。
-fn first_font_family(font: &usvg::Font) -> Option<String> {
-    // 字体栈里每个候选项都能得到一个名字，所以取第一个即可。
+/// 把字体栈展开成族名列表（CSS 通用族映射成 PowerPoint 上确实存在的字体）。
+fn font_family_names(font: &usvg::Font) -> Vec<String> {
     font.families()
         .iter()
         .map(|f| match f {
@@ -849,7 +873,12 @@ fn first_font_family(font: &usvg::Font) -> Option<String> {
             usvg::FontFamily::Cursive => "Comic Sans MS".to_string(),
             usvg::FontFamily::Fantasy => "Impact".to_string(),
         })
-        .next()
+        .collect()
+}
+
+/// 取字体栈里第一个可用族名；字体栈里每个候选项都能得到一个名字，所以取第一个即可。
+fn first_font_family(font: &usvg::Font) -> Option<String> {
+    font_family_names(font).into_iter().next()
 }
 
 /// 供测试与上层复用：一次转换后拿到的诊断。

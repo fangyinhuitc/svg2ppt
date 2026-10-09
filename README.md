@@ -79,6 +79,7 @@ for (code, n) in report.summary() {
 | `text-stroked-fallback` / `text-paint-fallback` | 描边文字 / 非纯色填充 → 转曲 |
 | `text-baseline-shift-fallback` / `text-small-caps-fallback` / `text-hidden-fallback` | 上下标 / small-caps / 隐藏文本 → 转曲 |
 | `text-empty-fallback` | 文本为空 → 转曲 |
+| `text-font-unresolved` | **字体在本机都找不到，整段文字被跳过** —— 见下方「字体」一节 |
 | `alpha-approximated` | 半透明与背景色预乘 |
 | `group-opacity-flattened` | 分组透明度近似到子元素 |
 | `filter-rasterized` / `clip-path-rasterized` / `mask-rasterized` | 滤镜 / 裁剪 / 遮罩 → 局部位图 |
@@ -87,6 +88,15 @@ for (code, n) in report.summary() {
 | `unsupported-image-rasterized` | WebP / 嵌套 SVG 图片 → 局部位图 |
 | `dash-approximated` | 自定义虚线就近映射为预设虚线 |
 | `gradient-spread-approximated` | 渐变 reflect/repeat 按 pad 处理 |
+
+## 字体（服务端部署必读）
+
+SVG 里的字体必须**在转换的那台机器上存在**，否则会出问题：
+
+- 首选方案是 `--font-dir <DIR>` 把字体目录显式指进来（Docker / CI 这类环境常常一个系统字体都没有）。
+- 一个字体都找不到时，`svg::parse` 直接报错退出；单个文本节点的字体栈全部解析不到时，会给出 `text-font-unresolved` 诊断并**跳过那段文字**。
+- 注意：**Linux 上 `fontdb` 不解析 CSS 通用族**（`sans-serif` / `serif` 一律匹配不到），macOS 和 Windows 则会兜到某个默认字体。所以 SVG 里最好写真实的族名，例如
+  `font-family="PingFang SC, Noto Sans CJK SC, Microsoft YaHei, sans-serif"`。
 
 ## 开发
 
@@ -109,7 +119,7 @@ cargo run --example inspect -- tests/fixtures/basic.svg  # 看 usvg 的节点变
 金样 fixture 限制两条，改之前先想清楚：
 
 1. **不含文本** —— 文本走字形轮廓，轮廓来自系统字体，三平台字体不同，快照必然挂。
-2. 比对的是 `ppt/slides/slideN.xml` 而**不是整个 pptx** —— `office-toolkit` 会把当前时间写进 zip 条目的 DOS 时间戳，同一个输入两次运行字节也不同（`slide_xml_is_deterministic` 这条测试守着这个前提）。
+2. 比对的是 `ppt/slides/slideN.xml` 而**不是整个 pptx** —— `office-toolkit` 会把当前时间写进 zip 条目的 DOS 时间戳，同一个输入两次运行字节也不同（`slide_xml_is_deterministic` 这条测试守着这个前提）。另外金样比对前会把 `\r` 抹掉，因为 Windows 的 `core.autocrlf` 会把快照 checkout 成 CRLF（配套有 `.gitattributes` 把 snapshot 钉成 LF）。
 
 改动了输出且确认是预期内的：
 
