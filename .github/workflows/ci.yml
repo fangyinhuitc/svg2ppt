@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "release/**"]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  # 让 panic 直接 abort，日志更干净，也让测试失败更早暴露
+  RUST_BACKTRACE: 1
+
+jobs:
+  check:
+    name: build & test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # 一个平台挂了不要取消其它平台 —— 跨平台差异正是这里要发现的东西
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Rust
+        run: rustup toolchain install stable --profile minimal --no-self-update
+      - name: 固定到 stable
+        run: rustup default stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      # fixtures 里有中文文本，usvg 需要能找到一个中文字体，
+      # 否则文本相关测试在无中文字体的 Linux runner 上会失败。
+      # macOS / Windows runner 自带中文字体，无需处理。
+      - name: 安装中文字体（Linux）
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+
+      - name: 构建
+        run: cargo build --all-targets --verbose
+
+      - name: 测试
+        run: cargo test --verbose
+
+      - name: Clippy（警告即失败）
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: 格式检查
+        run: cargo fmt --all --check
