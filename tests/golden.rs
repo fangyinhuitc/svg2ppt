@@ -38,9 +38,12 @@ fn slide_xml(bytes: &[u8], index: usize) -> String {
     s
 }
 
-/// 在标签边界断行：内容不变，但 diff 可读。
+/// 归一化后再比对：
+/// - 在标签边界断行，让 diff 可读
+/// - 抹掉 CRLF —— Windows 上 `core.autocrlf` 会把快照 checkout 成 CRLF，
+///   而 emit 层产出的始终是 LF。不统一行尾的话金样在 Windows 上必然红。
 fn normalize(xml: &str) -> String {
-    xml.replace("><", ">\n<")
+    xml.replace('\r', "").replace("><", ">\n<")
 }
 
 fn snapshot_path(fixture_name: &str) -> PathBuf {
@@ -72,12 +75,12 @@ fn drawingml_matches_golden() {
             continue;
         }
 
-        let expected = std::fs::read_to_string(&path).unwrap_or_else(|_| {
+        let expected = normalize(&std::fs::read_to_string(&path).unwrap_or_else(|_| {
             panic!(
                 "缺少金样快照：{}\n用 `SVG2PPT_UPDATE_GOLDEN=1 cargo test --test golden` 生成，并确认 diff 是你预期的改动",
                 path.display()
             )
-        });
+        }));
         assert_eq!(
             actual, expected,
             "金样不匹配：{name}\n若改动是有意的，用 `SVG2PPT_UPDATE_GOLDEN=1 cargo test --test golden` 更新"

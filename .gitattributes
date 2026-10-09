@@ -1,0 +1,6 @@
+# 金样快照必须保持 LF：否则 Windows 的 core.autocrlf 会把它 checkout 成 CRLF，
+# 与 emit 层产出的 LF XML 比对不一致。
+tests/snapshots/** text eol=lf
+
+# fixture 同理：行尾变化会改变文本的字节内容。
+tests/fixtures/** text eol=lf

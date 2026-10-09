@@ -12,5 +12,5 @@
   <g transform="rotate(20 320 260)">
     <rect x="260" y="230" width="120" height="60" fill="#10B981"/>
   </g>
-  <text x="40" y="330" font-family="PingFang SC" font-size="28" fill="#111827">中文标题与 English Text</text>
+  <text x="40" y="330" font-family="PingFang SC, Noto Sans CJK SC, Microsoft YaHei, sans-serif" font-size="28" fill="#111827">中文标题与 English Text</text>
 </svg>

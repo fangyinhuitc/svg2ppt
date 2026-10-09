@@ -30,9 +30,11 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      # fixtures 里有中文文本，usvg 需要能找到一个中文字体，
-      # 否则文本相关测试在无中文字体的 Linux runner 上会失败。
-      # macOS / Windows runner 自带中文字体，无需处理。
+      # fixtures 里有中文文本（PingFang SC / Noto Sans CJK SC / Microsoft YaHei
+      # 回退链），usvg 至少要能命中其中一个 —— Linux runner 默认没有中文字体。
+      # 注意：Linux 上 fontdb **不解析通用族**（sans-serif 也算），unresolved 时
+      # 整段文本会被丢掉，所以字体列表里必须有该平台真实存在的族名。
+      # Windows runner 自带 Microsoft YaHei；macOS 自带 PingFang SC。
       - name: 安装中文字体（Linux）
         if: runner.os == 'Linux'
         run: |
