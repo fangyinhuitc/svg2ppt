@@ -2,6 +2,13 @@
 name = "svg2ppt"
 version = "0.1.0"
 edition = "2024"
+description = "把 SVG 转成可编辑的 PowerPoint（.pptx）真实矢量形状，而非截图贴图"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/fangyinhuitc/svg2ppt"
+keywords = ["svg", "pptx", "powerpoint", "ooxml", "converter"]
+categories = ["command-line-utilities", "multimedia::images", "office-automation"]
+exclude = ["/docs", "/demo", "/.workbuddy"]
 
 [dependencies]
 anyhow = "1.0.104"
