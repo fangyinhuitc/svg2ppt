@@ -1,6 +1,6 @@
 [package]
 name = "svg2ppt"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 description = "把 SVG 转成可编辑的 PowerPoint（.pptx）真实矢量形状，而非截图贴图"
 license = "MIT"
