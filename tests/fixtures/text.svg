@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <rect x="0" y="0" width="800" height="450" fill="#FFFFFF"/>
+  <!-- 1. 单行 + 多 run + 居中对齐：应走可编辑文本框 -->
+  <text x="400" y="80" font-family="PingFang SC" font-size="32" text-anchor="middle">
+    <tspan fill="#DC2626">红色</tspan><tspan fill="#2563EB">与蓝色</tspan>
+  </text>
+  <!-- 2. 旋转文本：PPX 文本框无法表达任意旋转，应回落转曲 -->
+  <g transform="rotate(-12 200 200)">
+    <text x="120" y="200" font-family="PingFang SC" font-size="28" fill="#111827">旋转文本</text>
+  </g>
+  <!-- 3. 多行：行距由 SVG 决定，应回落转曲 -->
+  <text x="120" y="300" font-family="PingFang SC" font-size="24" fill="#374151">
+    <tspan x="120" dy="0">第一行文本</tspan>
+    <tspan x="120" dy="34">第二行文本</tspan>
+  </text>
+  <!-- 4. 字距调整：DrawingML 只有全局 spc，应回落转曲 -->
+  <text x="120" y="410" font-family="PingFang SC" font-size="24" fill="#6B7280" letter-spacing="4">字距调整文本</text>
+</svg>

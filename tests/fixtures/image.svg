@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200">
+  <rect x="0" y="0" width="400" height="200" fill="#F3F4F6"/>
+  <image x="40" y="60" width="80" height="80"
+         href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAJUlEQVR42mO8o6bGAAOetkfhbCYGHIB0CUbV5NdwzvbD1rSwAwD89AWqsbkMIgAAAABJRU5ErkJggg=="/>
+</svg>

@@ -1,0 +1,16 @@
+[package]
+name = "svg2ppt"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.104"
+clap = { version = "4.6.7", features = ["derive"] }
+office-toolkit = { version = "1", default-features = false, features = ["powerpoint"] }
+resvg = "0.48"
+thiserror = "2.0.21"
+tiny-skia = "0.12.0"
+usvg = "0.48"
+
+[dev-dependencies]
+zip = "9.0.0"
